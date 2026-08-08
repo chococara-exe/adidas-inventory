@@ -1,0 +1,167 @@
+// Prisma schema — Adidas Stock Management
+// Dev: SQLite (file:./dev.db). Production: switch provider to "postgresql"
+// and point DATABASE_URL at Supabase. SQLite has no native enums, so
+// enum-like fields are strings validated in lib/constants.ts — this keeps
+// the schema portable between the two databases.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Store {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  isCentral Boolean  @default(false) // Phase 2: central storage warehouse
+  createdAt DateTime @default(now())
+
+  users          User[]
+  stockLevels    StockLevel[]
+  receipts       Receipt[]       @relation("ReceiptStore")
+  transfersIn    Receipt[]       @relation("ReceiptToStore")
+  stockMovements StockMovement[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  name         String
+  email        String?
+  phone        String?
+  role         String   @default("STORE") // ADMIN | STORE
+  storeId      String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  store          Store?          @relation(fields: [storeId], references: [id])
+  receipts       Receipt[]
+  stockMovements StockMovement[]
+  notifications  Notification[]
+}
+
+model Category {
+  id            String        @id @default(cuid())
+  name          String        @unique
+  subCategories SubCategory[]
+  items         Item[]
+}
+
+model SubCategory {
+  id         String   @id @default(cuid())
+  name       String
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  items      Item[]
+
+  @@unique([categoryId, name])
+}
+
+model Item {
+  id            String  @id @default(cuid())
+  name          String
+  articleNumber String  @unique
+  categoryId    String
+  subCategoryId String?
+  // Prices stored in sen (integer) to avoid floating-point errors. RM 129.90 = 12990.
+  priceSen      Int
+  imageUrl      String?
+  // Namesets: generic nameset items carry this flag; the specialisation
+  // (player name/number) is captured per receipt line in namesetDetail.
+  isNameset         Boolean @default(false)
+  lowStockThreshold Int     @default(5)
+  active            Boolean @default(true)
+  createdAt         DateTime @default(now())
+
+  category       Category        @relation(fields: [categoryId], references: [id])
+  subCategory    SubCategory?    @relation(fields: [subCategoryId], references: [id])
+  stockLevels    StockLevel[]
+  receiptLines   ReceiptLine[]
+  stockMovements StockMovement[]
+}
+
+// Cached current stock per item per store. Always updated in the same
+// transaction as a StockMovement row — the movement ledger is the source
+// of truth for audits; this table exists for fast reads.
+model StockLevel {
+  id       String @id @default(cuid())
+  itemId   String
+  storeId  String
+  quantity Int    @default(0)
+
+  item  Item  @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, storeId])
+}
+
+model Receipt {
+  id     String   @id @default(cuid())
+  number Int      @unique // human-friendly receipt no., assigned sequentially in code
+  type   String // SALE | SPOIL | TRANSFER | STOCK_IN
+  date   DateTime @default(now())
+
+  storeId   String
+  toStoreId String? // TRANSFER only: receiving store
+  createdById String
+  staffName   String? // salesperson named on the receipt
+  note        String?
+  totalSen    Int     @default(0)
+  createdAt   DateTime @default(now())
+
+  store       Store         @relation("ReceiptStore", fields: [storeId], references: [id])
+  toStore     Store?        @relation("ReceiptToStore", fields: [toStoreId], references: [id])
+  createdBy   User          @relation(fields: [createdById], references: [id])
+  lines       ReceiptLine[]
+  movements   StockMovement[]
+}
+
+model ReceiptLine {
+  id           String  @id @default(cuid())
+  receiptId    String
+  itemId       String
+  quantity     Int
+  unitPriceSen Int
+  namesetDetail String? // e.g. "MESSI 10" for specialised nameset sales
+
+  receipt Receipt @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  item    Item    @relation(fields: [itemId], references: [id])
+}
+
+// Immutable stock ledger. Every change to stock — sale, spoil, transfer
+// (two rows), user stock-in — writes one row here. This is the audit log
+// and the basis for all reporting.
+model StockMovement {
+  id        String   @id @default(cuid())
+  itemId    String
+  storeId   String
+  delta     Int // negative = stock out, positive = stock in
+  reason    String // SALE | SPOIL | TRANSFER_OUT | TRANSFER_IN | STOCK_IN | ADJUSTMENT
+  receiptId String?
+  userId    String
+  createdAt DateTime @default(now())
+
+  item    Item     @relation(fields: [itemId], references: [id])
+  store   Store    @relation(fields: [storeId], references: [id])
+  receipt Receipt? @relation(fields: [receiptId], references: [id])
+  user    User     @relation(fields: [userId], references: [id])
+
+  @@index([itemId, storeId])
+  @@index([createdAt])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String?
+  type      String // LOW_STOCK | ORDER_EDITED | SYSTEM
+  message   String
+  read      Boolean  @default(false)
+  emailSent Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+}
