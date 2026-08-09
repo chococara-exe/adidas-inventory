@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "db:seed": "tsx prisma/seed.ts",
-    "test:stock": "tsx scripts/test-stock-engine.ts"
+    "test:stock": "tsx scripts/test-stock-engine.ts",
+    "test:routes": "tsx scripts/smoke-routes.ts",
+    "test:users": "tsx scripts/test-user-rules.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
