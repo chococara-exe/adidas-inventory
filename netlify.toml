@@ -7,6 +7,13 @@
 [build.environment]
   NODE_VERSION = "22"
 
+  # Turbopack writes env values into its own build cache, and Netlify's secret
+  # scanner reads that cache. Those .sst files are never served — they only
+  # speed up the next build — so exclude that one path. Exempting the key
+  # (SECRETS_SCAN_OMIT_KEYS) or disabling the scan would also stop it catching
+  # a genuine leak in deployed output, which is worth keeping.
+  SECRETS_SCAN_OMIT_PATHS = ".next/cache/**,.netlify/.next/cache/**"
+
 # Netlify's Next.js runtime. Installed automatically for Next sites, but pinned
 # here so the build does not depend on auto-detection.
 [[plugins]]
