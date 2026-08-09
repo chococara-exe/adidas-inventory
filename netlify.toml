@@ -1,0 +1,13 @@
+[build]
+  # `prisma generate` runs here (see package.json) rather than relying on the
+  # postinstall hook — Netlify restores node_modules from cache without
+  # re-running postinstall, which leaves a stale Prisma client behind.
+  command = "npm run build"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Netlify's Next.js runtime. Installed automatically for Next sites, but pinned
+# here so the build does not depend on auto-detection.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

@@ -1,16 +1,18 @@
 // Prisma schema — Adidas Stock Management
-// Dev: SQLite (file:./dev.db). Production: switch provider to "postgresql"
-// and point DATABASE_URL at Supabase. SQLite has no native enums, so
-// enum-like fields are strings validated in lib/constants.ts — this keeps
-// the schema portable between the two databases.
+// PostgreSQL (Neon), used by both local development and the Netlify deploy.
+// Enum-like fields are plain strings validated in lib/constants.ts — a holdover
+// from the original SQLite schema, kept because the validation already exists.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider = "postgresql"
+  // Pooled connection for the app; direct connection for migrations, which
+  // need a session the transaction pooler cannot provide.
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Store {
