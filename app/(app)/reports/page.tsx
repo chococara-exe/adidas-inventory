@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { formatRM } from "@/lib/currency";
+import { addDays, dayKey, daysBetween, parseDay } from "@/lib/dates";
 import { PrintButton } from "../print-button";
 import {
   TrendChart,
@@ -21,28 +22,6 @@ const FULL_LABEL = new Intl.DateTimeFormat("en-MY", {
 const REVENUE_HUE = "#2a78d6";
 const UNITS_HUE = "#eb6834";
 const MAX_RANGE_DAYS = 366;
-
-/** yyyy-mm-dd in local time — toISOString() shifts the day at UTC+8. */
-function dayKey(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-    d.getDate()
-  ).padStart(2, "0")}`;
-}
-
-function parseDay(value?: string): Date | null {
-  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
-  const [y, m, d] = value.split("-").map(Number);
-  const parsed = new Date(y, m - 1, d);
-  return parsed.getFullYear() === y && parsed.getMonth() === m - 1 && parsed.getDate() === d
-    ? parsed
-    : null;
-}
-
-const addDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
-
-/** Whole days between two local midnights, ignoring DST wobble. */
-const daysBetween = (a: Date, b: Date) =>
-  Math.round((b.getTime() - a.getTime()) / 86_400_000);
 
 const isWholeMonth = (from: Date, to: Date) =>
   from.getDate() === 1 &&
