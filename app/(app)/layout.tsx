@@ -8,7 +8,7 @@ const NAV = [
   { href: "/receipts", label: "Receipts", roles: ["ADMIN", "STORE"] },
   { href: "/stock-in", label: "Stock In", roles: ["STORE"] },
   { href: "/items", label: "Items", roles: ["ADMIN", "STORE"] },
-  { href: "/reports", label: "Reports", roles: ["ADMIN"] },
+  { href: "/reports", label: "Reports", roles: ["ADMIN", "STORE"] },
   { href: "/stores", label: "Stores & Users", roles: ["ADMIN"] },
 ];
 

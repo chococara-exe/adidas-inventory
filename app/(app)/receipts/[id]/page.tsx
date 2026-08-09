@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { formatRM } from "@/lib/currency";
 import { RECEIPT_TYPE_LABELS, type ReceiptType } from "@/lib/constants";
-import { PrintButton } from "./print-button";
+import { PrintButton } from "../../print-button";
 
 export default async function ReceiptDetailPage({
   params,
